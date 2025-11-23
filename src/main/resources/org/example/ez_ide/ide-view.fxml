@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/17.0.2"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.ez_ide.IDEController"
+            prefWidth="1200" prefHeight="800">
+
+    <top>
+        <VBox spacing="10" style="-fx-background-color: #2b579a;">
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10;">
+                <Button fx:id="newButton" text="Новый" onAction="#handleNewFile"
+                        style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                <Button fx:id="openButton" text="Открыть" onAction="#handleOpenFile"
+                        style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                <Button fx:id="saveButton" text="Сохранить" onAction="#handleSaveFile"
+                        style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                <Button fx:id="saveAsButton" text="Сохранить как" onAction="#handleSaveAsFile"
+                        style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold;"/>
+
+                <Separator orientation="VERTICAL" style="-fx-padding: 0 10;"/>
+
+                <Button fx:id="undoButton" text="↶ Откат" onAction="#handleUndo"
+                        style="-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                <Button fx:id="redoButton" text="↷ Повтор" onAction="#handleRedo"
+                        style="-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-weight: bold;"/>
+
+                <Separator orientation="VERTICAL" style="-fx-padding: 0 10;"/>
+
+                <Button fx:id="compileButton" text="▶ Компилировать" onAction="#handleCompile"
+                        style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-weight: bold;"/>
+                <Button fx:id="runButton" text="⚡ Запустить" onAction="#handleRun"
+                        style="-fx-background-color: #9C27B0; -fx-text-fill: white; -fx-font-weight: bold;"/>
+
+                <Separator orientation="VERTICAL" style="-fx-padding: 0 10;"/>
+
+                <Button fx:id="clearButton" text="Очистить консоль" onAction="#handleClearConsole"
+                        style="-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold;"/>
+            </HBox>
+
+            <HBox spacing="10" style="-fx-background-color: #1e3d6e; -fx-padding: 5 10;">
+                <Label fx:id="statusLabel" text="Готов к работе"
+                       style="-fx-text-fill: white; -fx-font-weight: bold;"/>
+                <Label fx:id="fileNameLabel" text="Безымянный файл"
+                       style="-fx-text-fill: #cccccc;"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <center>
+        <SplitPane orientation="VERTICAL" dividerPositions="0.8">
+            <VBox spacing="5" style="-fx-padding: 10;">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Редактор кода" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+                    <Label fx:id="lineInfoLabel" text="Строка: 1, Колонка: 1"
+                           style="-fx-text-fill: #666; -fx-font-size: 12;"/>
+                </HBox>
+
+                <TextArea fx:id="codeEditor" promptText="Введите ваш код здесь..."
+                          style="-fx-font-family: 'Consolas', 'Monospace'; -fx-font-size: 14px;"
+                          onKeyReleased="#updateLineInfo"
+                          prefHeight="500" minHeight="400"/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Button fx:id="insertTemplateButton" text="Вставить шаблон"
+                            onAction="#insertTemplate"
+                            style="-fx-background-color: #757575; -fx-text-fill: white;"/>
+                    <Button fx:id="formatButton" text="Форматировать"
+                            onAction="#handleFormat"
+                            style="-fx-background-color: #757575; -fx-text-fill: white;"/>
+                </HBox>
+            </VBox>
+
+            <VBox spacing="5" style="-fx-padding: 10;">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Консоль вывода" style="-fx-font-size: 14; -fx-font-weight: bold;"/>
+                    <Button fx:id="clearConsoleButton" text="Очистить"
+                            onAction="#handleClearConsole"
+                            style="-fx-background-color: #757575; -fx-text-fill: white;"/>
+                </HBox>
+
+                <TextArea fx:id="consoleOutput" promptText="Результаты выполнения..."
+                          style="-fx-font-family: 'Consolas', 'Monospace'; -fx-font-size: 12px;"
+                          editable="false"/>
+            </VBox>
+        </SplitPane>
+    </center>
+
+    <bottom>
+        <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding: 5 10; -fx-background-color: #f0f0f0;">
+            <Label fx:id="memoryInfoLabel" text="Память: 0/100" style="-fx-font-size: 12;"/>
+            <Label fx:id="compileTimeLabel" text="Время компиляции: -" style="-fx-font-size: 12;"/>
+            <Label fx:id="runTimeLabel" text="Время выполнения: -" style="-fx-font-size: 12;"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>
