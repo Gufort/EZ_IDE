@@ -7,16 +7,29 @@ import Interpret.ConvertASTToInterpretTreeVisitor;
 import Interpret.InterpretTree;
 import PrettyPrinters.PrettyPrinterSecond;
 import SemanticCheckLogic.SemanticCheck;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Stack;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class IDEController implements Initializable {
     @FXML private TextArea codeEditor;
@@ -35,13 +48,30 @@ public class IDEController implements Initializable {
     @FXML private Button saveButton;
 
     private Stage stage;
+    // Используем коллекции
     private Stack<String> undoStack;
     private Stack<String> redoStack;
+    // Используем коллекции и функциональные интерфейсы
+    private final List<Consumer<String>> consoleOutputListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<CompilationResult>> compilationCompleteListeners = new CopyOnWriteArrayList<>();
+    private Map<String, CompilationResult> compilationResults;
+
+    private ExecutorService backgroundExecutor;
+    private CompletableFuture<Void> currentCompilationTask;
+
     private File currentFile;
     private boolean isModified = false;
 
     @Override public void initialize(URL location, ResourceBundle resources) {
+        undoStack = new Stack<>();
+        redoStack = new Stack<>();
+        compilationResults = new java.util.LinkedHashMap<>();
+        backgroundExecutor = java.util.concurrent.Executors.newFixedThreadPool(2);
 
+        setupFunctionalInterfaces();
+        setComponent();
+        setupEventHandler();
+        setupKeyBindings();
     }
 
     private void setComponent(){
@@ -65,6 +95,23 @@ public class IDEController implements Initializable {
                 saveToUndo();
             }
         });
+    }
+
+    // Настраиваем функциональные интерфейсы
+    private void setupFunctionalInterfaces(){
+        // Используем Consumer для логов консоль со временем
+        Consumer<String> timestampLogger = message -> {
+            String timestamp = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
+            Platform.runLater(()->{consoleOutput.appendText("[ " + timestamp + "] " + message + '\n');});
+        };
+        consoleOutputListeners.add(timestampLogger);
+
+        // Используем Consumer для вывода результатов компиляции
+        Consumer<CompilationResult> resultProcessor = result -> {
+            compilationResults.put(result.getTimestamp(), result);
+            updateCompilationStatistics();
+        };
+        compilationCompleteListeners.add(resultProcessor);
     }
 
     // Создание нового файла
@@ -162,49 +209,49 @@ public class IDEController implements Initializable {
 
     @FXML
     private void handleCompile() {
-        consoleOutput.appendText("=== КОМПИЛЯЦИЯ ===\n");
-        statusLabel.setText("Компиляция...");
+       if(currentCompilationTask != null && !currentCompilationTask.isDone()){
+           showError("Компиляция", "Компиляция уже выполняется");
+           return;
+       }
 
-        long startTime = System.currentTimeMillis();
+       currentCompilationTask = CompletableFuture.runAsync(() -> {
+           Platform.runLater(() -> {
+               consoleOutput.appendText("=== Компиляция ===\n");
+               statusLabel.setText("Компиляция...");
+               compileButton.setDisable(true);
+           });
 
-        try {
-            String code = codeEditor.getText();
-            if (code.trim().isEmpty()) {
-                consoleOutput.appendText("Ошибка: Пустая программа\n");
-                statusLabel.setText("Ошибка компиляции");
-                return;
-            }
+           try{
+               String codeText =  codeEditor.getText();
+               var startTime = System.currentTimeMillis();
+               var lexer = new LexerUnit.Lexer(codeText);
+               var parser = new Parser(lexer);
+               var program = parser.mainProgram();
+               program.visitP(new SemanticCheck());
+               var rooti = (InterpretTree.StatementNodeI) program.visit(new ConvertASTToInterpretTreeVisitor());
+               var endTime = System.currentTimeMillis();
+               var elapsedTime = endTime - startTime;
+               CompilationResult result = new CompilationResult(true, "Компиляция прошла успешно", elapsedTime);
 
-            LexerUnit.Lexer lex = new LexerUnit.Lexer(code);
-
-            try {
-                Parser par = new Parser(lex);
-                Basic.ASTNodes.StatementNode progr = par.mainProgram();
-                progr.visitP(new SemanticCheck());
-                InterpretTree.StatementNodeI rooti = (InterpretTree.StatementNodeI) progr.visit(new ConvertASTToInterpretTreeVisitor());
-                long endTime = System.currentTimeMillis();
-                compileTimeLabel.setText(String.format("Время компиляции: %dms", endTime - startTime));
-                consoleOutput.appendText("✓ Компиляция успешно завершена\n");
-                consoleOutput.appendText("✓ Лексический анализ: " + lex.tokens.size() + " токенов\n");
-                consoleOutput.appendText("✓ Синтаксический анализ: AST построено\n");
-                consoleOutput.appendText("✓ Семантический анализ пройден\n");
-                consoleOutput.appendText("✓ Дерево интерпретации построено\n");
-                statusLabel.setText("Компиляция успешна");
-
-            } catch (CompilerException.LexerException e) {
-                consoleOutput.appendText("✗ Лексическая ошибка: " + e.getMessage() + "\n");
-                statusLabel.setText("Лексическая ошибка");
-
-            } catch (CompilerException.SyntaxException e) {
-                consoleOutput.appendText("✗ Синтаксическая ошибка: " + e.getMessage() + "\n");
-                statusLabel.setText("Синтаксическая ошибка");
-            }
-
-        } catch (Exception e) {
-            consoleOutput.appendText("✗ Ошибка компиляции: " + e.getMessage() + "\n");
-            statusLabel.setText("Ошибка компиляции");
-        }
-        consoleOutput.appendText("\n");
+               // Выводим результаты в консоль и делаем кнопку компиляции активной вновь
+               Platform.runLater(() -> {
+                   compileTimeLabel.setText(String.format("Время компиляции: %dms", result.duration));
+                   consoleOutput.appendText("✓ Компиляция успешно завершена\n");
+                   statusLabel.setText("Компиляция успешна");
+                   compileButton.setDisable(false);
+               });
+               compilationCompleteListeners.forEach(listener -> listener.accept(result));
+           } catch (Exception e) {
+               CompilationResult result = new CompilationResult(false, e.getMessage(), 0);
+               // Выводим результаты в консоль и делаем кнопку компиляции активной вновь
+               Platform.runLater(() -> {
+                   consoleOutput.appendText("✗ Ошибка компиляции: " + e.getMessage() + "\n");
+                   statusLabel.setText("Ошибка компиляции");
+                   compileButton.setDisable(false);
+               });
+               compilationCompleteListeners.forEach(listener -> listener.accept(result));
+           }
+       },  backgroundExecutor);
     }
 
     @FXML
@@ -384,5 +431,59 @@ public class IDEController implements Initializable {
         alert.setHeaderText(null);
         alert.setContentText(message);
         return alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK;
+    }
+
+    // Статистика компиляций, используем Stream API
+    private void updateCompilationStatistics(){
+        String stats = compilationResults.values().stream().
+                filter(CompilationResult::isSuccess).
+                map(r -> String.format("%dms", r.duration)).
+                collect(Collectors.joining(", ", "Последние компиляции: ", ""));
+        // Добавляем текст в консоль
+        Platform.runLater(() -> {
+            if(!stats.isEmpty()) {
+                consoleOutput.appendText(stats + '\n');
+            }
+        });
+    }
+
+    // Комбинации клавиш для различных действий
+    private void setupKeyBindings() {
+        // Ctrl + Z
+        KeyCombination undoKeyCombination = new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN);
+        Runnable undoAction = this::handleUndo;
+        // Ctrl + Y
+        KeyCombination redoKeyCombination = new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN);
+        Runnable redoAction = this::handleRedo;
+
+        codeEditor.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if(undoKeyCombination.match(event)) {
+                undoAction.run();
+                event.consume();
+            }
+            else if(redoKeyCombination.match(event)) {
+                redoAction.run();
+                event.consume();
+            }
+        });
+    }
+
+    private static class CompilationResult {
+        private final boolean success;
+        private final String message;
+        private final long duration;
+        private final String timestamp;
+
+        public CompilationResult(boolean success, String message, long duration) {
+            this.success = success;
+            this.message = message;
+            this.duration = duration;
+            this.timestamp = java.time.LocalDateTime.now().toString();
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public long getDuration() { return duration; }
+        public String getTimestamp() { return timestamp; }
     }
 }
