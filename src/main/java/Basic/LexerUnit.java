@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 public class LexerUnit {
     public enum TokenType {
-        INT, BIGINTEGERLITERAL, DOUBLELITERAL, STRINGLITERAL, ID,
+        INT, BIGINTEGERLITERAL, DOUBLELITERAL, STRINGLITERAL, ID, ARRAY,
         PLUS, MINUS, MULTIPLE, DIVIDE, DOT,
         SEMICOLON, COMMA, LEFT_PAREN, RIGHT_PAREN, LEFT_BRACKET, RIGHT_BRACKET, COLON, LEFT_BRACE, RIGHT_BRACE,
         ASSIGN, ASSIGNPLUS, ASSIGNMINUS, ASSIGNMULTIPLE, ASSIGNDIVIDE,
@@ -65,7 +65,7 @@ public class LexerUnit {
         public ArrayList<Token> tokens = new ArrayList<Token>();
         public String code;//Код программы, который анализируется в конструкторе
 
-        private int line = 1;//Текущая строкаs
+        private int line = 1;//Текущая строка
         private int column = 0;//Текущий столбец
         private int currentPosition = 0;//Текущая позиция
         private int start = 0;//Стартовая позиция токена

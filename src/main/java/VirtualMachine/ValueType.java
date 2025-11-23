@@ -12,7 +12,7 @@ public class ValueType {
     public int integer;
     public double real;
     public boolean bool;
-    public BigInteger bigInteger;
+    public BigInteger bigInteger =  new BigInteger("0");
     public VarValueType type;
 
     public ValueType(int integer){

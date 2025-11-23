@@ -16,7 +16,7 @@ public abstract class ParserBase {
         tokens = lexer.tokens;
     }
 
-    /// Проверить, что тип текушего токена совпадает с данным типом
+    /// Проверить, что тип текущего токена совпадает с данным типом
     public boolean check(LexerUnit.TokenType type){
         return peekToken().type == type;
     }
@@ -27,7 +27,7 @@ public abstract class ParserBase {
     }
 
 
-    /// Проверить, что тип текушего токена совпадает с одним из данных типов и перейти к следующему токену
+    /// Проверить, что тип текущего токена совпадает с одним из данных типов и перейти к следующему токену
     public boolean at(LexerUnit.TokenType... types){
         return Arrays.stream(types).anyMatch(this::check);
     }

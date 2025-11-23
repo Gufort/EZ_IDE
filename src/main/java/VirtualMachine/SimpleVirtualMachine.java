@@ -5,6 +5,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Stack;
 import java.util.function.Consumer;
+import java.math.BigInteger;
 
 public class SimpleVirtualMachine {
     public static ValueType[] memory = new ValueType[1000];
@@ -77,6 +78,14 @@ public class SimpleVirtualMachine {
         initialize();
     }
 
+    private static void copyValue(ValueType source, ValueType dest) {
+        dest.integer = source.integer;
+        dest.real = source.real;
+        dest.bool = source.bool;
+        dest.bigInteger = source.bigInteger;
+        dest.type = source.type;
+    }
+
     private static void ensureMemoryAccess(int index) {
         if (index < 0) {
             throw new RuntimeException("Invalid memory index: " + index);
@@ -105,6 +114,9 @@ public class SimpleVirtualMachine {
             case ThreeAddressCode.Commands.BCAAS:
                 memory[tar.indexInMemory].bool = tar.BValue;
                 break;
+            case ThreeAddressCode.Commands.BICAAS:
+                memory[tar.indexInMemory].bigInteger = tar.BIValue;
+                break;
 
             case ThreeAddressCode.Commands.IASS:
                 if (tar.indexOfFirstOperand >= 0)
@@ -118,6 +130,32 @@ public class SimpleVirtualMachine {
                 if (tar.indexOfFirstOperand >= 0)
                     memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bool;
                 break;
+            case ThreeAddressCode.Commands.BIASS:
+                if (tar.indexOfFirstOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger;
+                break;
+
+
+            case ThreeAddressCode.Commands.BIASSADD:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.add(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BIASSSUB:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.subtract(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BIASSMUL:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.multiply(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BIASSDIV:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0) {
+                    if(memory[tar.indexOfSecondOperand].bigInteger.equals(BigInteger.ZERO))
+                        throw new Exception("Divide by zero!!!");
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.divide(memory[tar.indexOfSecondOperand].bigInteger);
+                }
+                break;
+
 
             case ThreeAddressCode.Commands.IASSADD:
                 if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
@@ -158,6 +196,27 @@ public class SimpleVirtualMachine {
                 }
                 break;
 
+            case ThreeAddressCode.Commands.BIADD:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.add(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BISUB:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.subtract(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BIMUL:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.multiply(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BIDIV:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0) {
+                    if(memory[tar.indexOfSecondOperand].bigInteger.equals(BigInteger.ZERO))
+                        throw new Exception("Divide by zero!!!");
+                    memory[tar.indexInMemory].bigInteger = memory[tar.indexOfFirstOperand].bigInteger.divide(memory[tar.indexOfSecondOperand].bigInteger);
+                }
+                break;
+
+
             case ThreeAddressCode.Commands.IADD:
                 if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
                     memory[tar.indexInMemory].integer = memory[tar.indexOfFirstOperand].integer + memory[tar.indexOfSecondOperand].integer;
@@ -197,6 +256,64 @@ public class SimpleVirtualMachine {
                 }
                 break;
 
+            // Array realization
+            case ThreeAddressCode.Commands.ARRALLOC:
+                // Выделяем память под массив и заполняем массив значениями по умолчанию
+                if(tar.indexInMemory >= 0){
+                    var size = memory[tar.indexOfFirstOperand].integer;
+                    ensureMemoryAccess(tar.indexInMemory + size);
+                    for(int i = 0; i < size; i++)
+                        memory[tar.indexInMemory + i] = new ValueType();
+                }
+                break;
+            case ThreeAddressCode.Commands.ARRSTORE:
+                if(tar.indexInMemory >= 0 && tar.indexOfFirstOperand >= 0 &&  tar.indexOfSecondOperand >= 0){
+                    var index =  memory[tar.indexOfFirstOperand].integer;
+                    var value = memory[tar.indexOfSecondOperand];
+                    ensureMemoryAccess(index + tar.indexInMemory);
+                    memory[tar.indexOfFirstOperand + index] = value;
+                }
+                break;
+            case ThreeAddressCode.Commands.ARRLOAD:
+                if(tar.indexInMemory >= 0 && tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0){
+                    var index =  memory[tar.indexOfFirstOperand].integer;
+                    ensureMemoryAccess(index + tar.indexInMemory);
+                    memory[tar.indexInMemory] = new ValueType();
+                    copyValue(memory[tar.indexInMemory + index], memory[tar.indexInMemory]);
+                }
+                break;
+            case ThreeAddressCode.Commands.ARRLEN:
+                if(tar.indexInMemory >= 0 && tar.indexOfFirstOperand >= 0)
+                    memory[tar.indexInMemory].integer = memory[tar.indexOfFirstOperand].integer;
+                break;
+
+            // BigInteger comparison operations
+            case ThreeAddressCode.Commands.BILT:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bigInteger.compareTo(memory[tar.indexOfSecondOperand].bigInteger) < 0;
+                break;
+            case ThreeAddressCode.Commands.BIGT:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bigInteger.compareTo(memory[tar.indexOfSecondOperand].bigInteger) > 0;
+                break;
+            case ThreeAddressCode.Commands.BILEQ:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bigInteger.compareTo(memory[tar.indexOfSecondOperand].bigInteger) <= 0;
+                break;
+            case ThreeAddressCode.Commands.BIGEQ:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bigInteger.compareTo(memory[tar.indexOfSecondOperand].bigInteger) >= 0;
+                break;
+            case ThreeAddressCode.Commands.BIEQ:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bigInteger.equals(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+            case ThreeAddressCode.Commands.BINEQ:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexInMemory].bool = !memory[tar.indexOfFirstOperand].bigInteger.equals(memory[tar.indexOfSecondOperand].bigInteger);
+                break;
+
+            // Integer comparison operations (existing)
             case ThreeAddressCode.Commands.ILT:
                 if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
                     memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].integer < memory[tar.indexOfSecondOperand].integer;
@@ -260,9 +377,22 @@ public class SimpleVirtualMachine {
                     memory[tar.indexInMemory].bool = memory[tar.indexOfFirstOperand].bool != memory[tar.indexOfSecondOperand].bool;
                 break;
 
+            // Type conversions
             case ThreeAddressCode.Commands.CONITR:
                 if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
                     memory[tar.indexOfFirstOperand].real = memory[tar.indexOfSecondOperand].integer;
+                break;
+            case ThreeAddressCode.Commands.CONITBI:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexOfFirstOperand].bigInteger = BigInteger.valueOf(memory[tar.indexOfSecondOperand].integer);
+                break;
+            case ThreeAddressCode.Commands.CONBITI:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexOfFirstOperand].integer = memory[tar.indexOfSecondOperand].bigInteger.intValue();
+                break;
+            case ThreeAddressCode.Commands.CONBTR:
+                if (tar.indexOfFirstOperand >= 0 && tar.indexOfSecondOperand >= 0)
+                    memory[tar.indexOfFirstOperand].real = memory[tar.indexOfSecondOperand].bigInteger.doubleValue();
                 break;
 
             case ThreeAddressCode.Commands.CALL:
@@ -335,7 +465,10 @@ public class SimpleVirtualMachine {
         if (!paramStack.isEmpty()) {
             ValueType value = paramStack.peek();
 
-            if (Math.abs(value.real) > TOLERANCE) {
+            // Check BigInteger first
+            if (value.bigInteger != null && !value.bigInteger.equals(BigInteger.ZERO)) {
+                outputHandler.accept(value.bigInteger.toString());
+            } else if (Math.abs(value.real) > TOLERANCE) {
                 outputHandler.accept(String.format("%.6f", value.real));
             } else if (value.integer != 0) {
                 outputHandler.accept(Integer.toString(value.integer));
@@ -350,9 +483,31 @@ public class SimpleVirtualMachine {
     public static void memoryDump(int count) {
         System.out.println("Memory Dump:");
         for (int i = 0; i < Math.min(count, memory.length); i++) {
-            if (memory[i].integer != 0 || Math.abs(memory[i].real) > TOLERANCE || memory[i].bool) {
-                System.out.printf("Mem[%d] = i:%d, r:%.6f, b:%s%n",
-                        i, memory[i].integer, memory[i].real, memory[i].bool);
+            boolean hasValue = false;
+            StringBuilder sb = new StringBuilder();
+            sb.append("Mem[").append(i).append("] = ");
+
+            if (memory[i].integer != 0) {
+                sb.append("i:").append(memory[i].integer).append(", ");
+                hasValue = true;
+            }
+            if (Math.abs(memory[i].real) > TOLERANCE) {
+                sb.append("r:").append(String.format("%.6f", memory[i].real)).append(", ");
+                hasValue = true;
+            }
+            if (memory[i].bool) {
+                sb.append("b:").append(memory[i].bool).append(", ");
+                hasValue = true;
+            }
+            if (memory[i].bigInteger != null && !memory[i].bigInteger.equals(BigInteger.ZERO)) {
+                sb.append("bi:").append(memory[i].bigInteger).append(", ");
+                hasValue = true;
+            }
+
+            if (hasValue) {
+                // Remove trailing comma and space
+                String output = sb.toString().replaceAll(", $", "");
+                System.out.println(output);
             }
         }
     }

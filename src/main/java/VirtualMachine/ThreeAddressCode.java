@@ -4,76 +4,102 @@ import java.math.BigInteger;
 
 public class ThreeAddressCode {
     public enum Commands{
-        //  = const
+        // = const
         ICAAS, // int
         RCAAS, // double
         BCAAS, // bool
         BICAAS,// bigInteger
 
-        //  =
+        // =
         IASS, // int assignment
         RASS, // double assignment
         BASS, // bool assignment
+        BIASS, // BigInteger assignment
 
         // +=
         IASSADD, // += int
         RASSADD, // += double
+        BIASSADD, // += BigInteger
 
         // -=
         IASSSUB, // -= int
         RASSSUB, // -= double
+        BIASSSUB, // -= BigInteger
 
         // *=
         IASSMUL, // *= int
         RASSMUL, // *= double
+        BIASSMUL, // *= BigInteger
 
         // /=
         IASSDIV, // /= int
         RASSDIV, // /= double
+        BIASSDIV, // /= BigInteger
 
         // a + b
         IADD, // int + int
         RADD, // double + double
+        BIADD, // BigInteger + BigInteger
 
         // a - b
         ISUB, // int - int
         RSUB, // double - double
+        BISUB, // BigInteger - BigInteger
 
         // a * b
         IMUL, // int * int
         RMUL, // double * double
+        BIMUL, // BigInteger * BigInteger
 
         // a / b
         IDIV, // int / int
         RDIV, // double / double
+        BIDIV, // BigInteger / BigInteger
 
         // a < b
         ILT, // int less then
         RLT, // double less then
+        BILT, // BigInteger less then
 
         // a > b
         IGT, // int greater then
-        RGT, // int greater then
+        RGT, // double greater then
+        BIGT, // BigInteger greater then
 
         // a >= b
         IGEQ, // int >= int
         RGEQ, // double >= double
+        BIGEQ, // BigInteger >= BigInteger
 
         // a <= b
         ILEQ, // int <= int
         RLEQ, // double <= double
+        BILEQ, // BigInteger <= BigInteger
 
         // a == b
         IEQ, // int == int
         REQ, // double == double
         BEQ, // bool == bool
+        BIEQ, // BigInteger == BigInteger
 
         // a != b
         INEQ, // int != int
         RNEQ, // double != double
         BNEQ, // bool != bool
+        BINEQ, // BigInteger != BigInteger
 
+        // Array realization
+        ARRALLOC, // выделение памяти по массив
+        ARRSTORE, // запись элемента в массив
+        ARRLOAD,  // чтение элемента из массива
+        ARRLEN,   // длина массива
+
+        // Conversions
         CONITR, // convert int to double
+        CONITBI, // convert int to BigInteger
+        CONBITI, // convert BigInteger to int
+        CONBTR, // convert BigInteger to double
+
         CALL, // func call
         PARAM, // parameter passing
 

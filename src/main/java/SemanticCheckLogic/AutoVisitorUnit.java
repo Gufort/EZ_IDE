@@ -30,6 +30,44 @@ public class AutoVisitorUnit implements ASTNodes.IVisitorP {
         node.expr.visitP(this);
         node.id.visitP(this);
     }
+    @Override
+    public void visitArrayAccess(ASTNodes.ArrayAccessNode node) throws Exception {
+        node.array.visitP(this);
+        node.index.visitP(this);
+    }
+
+    @Override
+    public void visitArrayLiteral(ASTNodes.ArrayLiteralNode node) throws Exception {
+        for (var element : node.elements) {
+            element.visitP(this);
+        }
+    }
+
+    @Override
+    public void visitArrayDeclaration(ASTNodes.ArrayDeclarationNode node) throws Exception {
+        node.id.visitP(this);
+        if (node.size != null)
+            node.size.visitP(this);
+        if (node.initialElements != null) {
+            for (var value : node.initialElements) {
+                value.visitP(this);
+            }
+        }
+    }
+    @Override
+    public void visitArrayAssign(ASTNodes.ArrayAssignNode node) throws Exception {
+        node.array.visitP(this);
+        node.index.visitP(this);
+        node.expr.visitP(this);
+    }
+
+    @Override
+    public void visitArrayAssignOperation(ASTNodes.ArrayAssignOperationNode node) throws Exception {
+        node.array.visitP(this);
+        node.index.visitP(this);
+        node.expr.visitP(this);
+    }
+
     @Override public void visitIf(ASTNodes.IfNode node) throws Exception{
         node.cond.visitP(this);
         node.then.visitP(this);
